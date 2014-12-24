@@ -10,7 +10,6 @@ var app = express();
 
 app.use(cors());
 
-
 // fbgraph
 var conf = {
     client_id:      process.env.APP_ID || 'YOUR-APP-ID',
@@ -33,7 +32,6 @@ app.get('/auth/facebook', function(req, res) {
         } else {
             res.send('access denied');
         }
-        
         return;
     }
 
@@ -50,60 +48,75 @@ app.get('/auth/facebook', function(req, res) {
     });
 });
 
+//  Routing
 app.get('/user', function(req, res){
 
-    var me = {};
-    var friendsArr = [];
+    var newUserObj = {};
+    var friendsIdObj = {};
+    var dbUserObj = {};
+    var allFriends = [];
+    var friendsString = '?fields=id,name,birthday,hometown,location,education,gender,interested_in,relationship_status,timezone,languages,locale';
 
-    // what you need? 
-    // a save to db function
-    // a create friends array function
-
-    // Fb call to get user information
     graph.get('/me', function(err, data) {
-    console.log('User id:', data.id);
-
-    // console.log('User Found:', db.myCollection.find());
-
-    me = data;
-    // friendsArr = _.pluck(me.
-
-    db.myCollection.find({id: me.id}).toArray().then(function(result){
-        console.log('Docs:', result);
-
-        // if the user exists here
-            // 1) we build a friends array (let's use uderscore's pluck)
-            // 2) we update the user info
-            // 3) verify if the user friends array is the same
-                // yes, we do nothing
-                // no, we add it to the friends property with the new date
-
-        if(result.length) console.log('yes');
-        res.send(result);
-    });
-
-    // res.send(db.myCollection.find());
-
-    // Step 1 look for the user in the database --> db.mycollection.find({id: data.id})
-        // A - the user doesn't exist 
-            // save the user and create a friends array in a friends property with the date --> db.mycollection.save(data)
-
-        // B - the user exists in the database 
-            // update the user and add a new friends array to the friends property with the date
+        newUserObj = data; // we assign the result of the graph call
         
-        // db.myCollection.save(data).then(function(docs){
-        //  res.send({user: docs});
-        // });
-    });
+        // we look for that user in db
+        db.myCollection.findOne({id: newUserObj.id}).then(function(result){
+            dbUserObj = result;
+            console.log('dbUserObj:', dbUserObj);
+            
+            graph.get('/me/friends' + friendsString, function(err, data) {
 
-    // here we build the friends array
-    graph.get('/me/friends?fields=id,name,birthday,hometown,location,education,gender,interested_in,relationship_status,timezone,languages,locale', function(err, data) {
-        // console.log('Friends:', data);
-        friendsArr = __.pluck(data.data, 'id'); 
-        console.log(friendsArr);
-        console.log(friendsArr.length);
-        // console.log(friendsArr);
+                allFriends = data.data;
+                console.log('allFriends:', allFriends);
+                console.log('allFriends length:', allFriends.length);
+                friendsIdObj = {date: new Date(), friends: __.pluck(data.data, 'id')} // we create the friends object
+            
+                if(!dbUserObj){
+                    newUserObj.allFriendsId = [];
+                    newUserObj.allFriendsId.push(friendsIdObj);
+
+                    db.myCollection.save(newUserObj).then(function(docs){
+                        res.send({user: docs});
+                    });
+                }
+                else{
+                    console.log('----------------------------------------');
+                    // console.log('friends from Facebook:', friendsIdObj.friends);
+                    // console.log('friends in db:', dbUserObj.allFriendsId[dbUserObj.allFriendsId.length - 1].friends);
+
+                    // we add the current (the most updated) friends array to the newUserObj
+                    newUserObj.allFriendsId = dbUserObj.allFriendsId;
+                    
+                    // if the last friends array didn't change we still update the rest of the user information
+                    if(__.difference(dbUserObj.allFriendsId[dbUserObj.allFriendsId.length - 1].friends, friendsIdObj.friends).length === 0){
+                                                
+                        // we update the user in the database
+                        db.myCollection.update({id: dbUserObj.id}, newUserObj).then(function(docs){
+                            res.send('Same Friends');
+                        });
+                    }
+                    else{
+                        newUserObj.allFriendsId.push(friendsIdObj);
+                        
+                        db.myCollection.update({id: dbUserObj.id}, newUserObj).then(function(docs){
+                            res.send('different Friends, user Updated now');
+                        });
+                    }
+                }
+
+                // now that the login process is in place. let's send the actual information that is gonna get parsed by the front end
+
+                __.map(allFriends, function(friend){
+                    db.myCollection.findOne({id: friend.id}).then(function(result){
+                        // console.log('hello: ', result ? result : friend);
+                        return result ? result : friend;
+                    });
+                });
+
+                console.log('Those are all filtered friends:', allFriends);
+            })
+        });
     });
 });
-
 app.listen(3000);
