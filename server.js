@@ -1,9 +1,9 @@
-var express = require("express");
-var cors = require("cors");
-var pmongo = require("promised-mongo");
-var db = pmongo("mongodb://127.0.0.1:27017/myDb", ["myCollection"]);
-// 'mongodb://127.0.0.1:27017/test'
-var graph = require('fbgraph');
+var express = require('express');
+var cors = require('cors');
+var Promise = require('bluebird');
+var pmongo = require('promised-mongo');
+var db = Promise.promisifyAll(pmongo('mongodb://127.0.0.1:27017/myDb', ['myCollection']));
+var graph = Promise.promisifyAll(require('fbgraph'));
 var __ = require('underscore');
 
 var app = express();
@@ -53,70 +53,91 @@ app.get('/user', function(req, res){
 
     var newUserObj = {};
     var friendsIdObj = {};
-    var dbUserObj = {};
     var allFriends = [];
     var friendsString = '?fields=id,name,birthday,hometown,location,education,gender,interested_in,relationship_status,timezone,languages,locale';
+    
+    Promise.all([graph.getAsync('/me'), graph.getAsync('/me/friends' + friendsString)])
+    // graph.getAsync('/me')
+    .then(function(data){
+        // User Object
+        newUserObj = data[0];
 
-    graph.get('/me', function(err, data) {
-        newUserObj = data; // we assign the result of the graph call
+        // Friends Object
+        allFriends = data[1].data;
+        // console.log(allFriends);
+        friendsIdObj = {date: new Date(), friends: __.pluck(data[1].data, 'id')}
+    })
+    .then(function(){
+        return db.myCollection.findOne({id: newUserObj.id})
+    })
+    .then(function(dbUserObj){
+        if(!dbUserObj){
+            newUserObj.allFriendsId = [];
+            newUserObj.allFriendsId.push(friendsIdObj);
+
+            return db.myCollection.save(newUserObj)
+        }
+        else{
+            console.log('----------------------------------------');
+
+            // we add the current (the most updated) friends array to the newUserObj
+            newUserObj.allFriendsId = dbUserObj.allFriendsId;
+            
+            // if the last friends array didn't change we still update the rest of the user information
+            if(__.difference(dbUserObj.allFriendsId[dbUserObj.allFriendsId.length - 1].friends, friendsIdObj.friends).length === 0){
+                                        
+                // we update the user in the database
+                return db.myCollection.update({id: dbUserObj.id}, newUserObj);
+            }
+            else{
+                newUserObj.allFriendsId.push(friendsIdObj);
+                return db.myCollection.update({id: dbUserObj.id}, newUserObj);
+            }
+        }
+    })
+    .then(function(){
+        return db.myCollection.find({ id: { $in: friendsIdObj.friends } }).toArray();
+    })
+    .then(function(data){
+
+        var mixedArr = [];
+
+        if(data.length > 0){
+            var newFriends = __.indexBy(allFriends, 'id');
+
+            __.each(data, function(friendInDb){
+                delete newFriends[friendInDb.id]
+            });
+
+            __.each(newFriends, function(friend){
+                mixedArr.push(friend);
+            });
+
+            mixedArr = mixedArr.concat(data);
+
+            return mixedArr;
+        }
+        else
+        {
+            return allFriends;
+        }
+    })
+    .then(function(data){
         
-        // we look for that user in db
-        db.myCollection.findOne({id: newUserObj.id}).then(function(result){
-            dbUserObj = result;
-            console.log('dbUserObj:', dbUserObj);
-            
-            graph.get('/me/friends' + friendsString, function(err, data) {
-
-                allFriends = data.data;
-                console.log('allFriends:', allFriends);
-                console.log('allFriends length:', allFriends.length);
-                friendsIdObj = {date: new Date(), friends: __.pluck(data.data, 'id')} // we create the friends object
-            
-                if(!dbUserObj){
-                    newUserObj.allFriendsId = [];
-                    newUserObj.allFriendsId.push(friendsIdObj);
-
-                    db.myCollection.save(newUserObj).then(function(docs){
-                        res.send({user: docs});
-                    });
-                }
-                else{
-                    console.log('----------------------------------------');
-                    // console.log('friends from Facebook:', friendsIdObj.friends);
-                    // console.log('friends in db:', dbUserObj.allFriendsId[dbUserObj.allFriendsId.length - 1].friends);
-
-                    // we add the current (the most updated) friends array to the newUserObj
-                    newUserObj.allFriendsId = dbUserObj.allFriendsId;
-                    
-                    // if the last friends array didn't change we still update the rest of the user information
-                    if(__.difference(dbUserObj.allFriendsId[dbUserObj.allFriendsId.length - 1].friends, friendsIdObj.friends).length === 0){
-                                                
-                        // we update the user in the database
-                        db.myCollection.update({id: dbUserObj.id}, newUserObj).then(function(docs){
-                            res.send('Same Friends');
-                        });
-                    }
-                    else{
-                        newUserObj.allFriendsId.push(friendsIdObj);
-                        
-                        db.myCollection.update({id: dbUserObj.id}, newUserObj).then(function(docs){
-                            res.send('different Friends, user Updated now');
-                        });
-                    }
-                }
-
-                // now that the login process is in place. let's send the actual information that is gonna get parsed by the front end
-
-                __.map(allFriends, function(friend){
-                    db.myCollection.findOne({id: friend.id}).then(function(result){
-                        // console.log('hello: ', result ? result : friend);
-                        return result ? result : friend;
-                    });
-                });
-
-                console.log('Those are all filtered friends:', allFriends);
-            })
+        __.map(data, function(friend){
+            delete friend['_id'];
+            delete friend.id;
+            delete friend.name;
+            return friend;
         });
-    });
+
+        delete newUserObj.allFriendsId;
+
+        var finalArr = {
+            me: newUserObj,
+            friends: data
+        };
+        res.send({atTheEnd: finalArr, lengthFriends: finalArr.friends.length});
+    })
 });
 app.listen(3000);
