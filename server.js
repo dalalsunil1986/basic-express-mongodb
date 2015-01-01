@@ -10,6 +10,10 @@ var app = express();
 
 app.use(cors());
 
+var corsOptions = {
+  origin: 'http://127.0.0.1:9000'
+};
+
 // fbgraph
 var conf = {
     client_id:      process.env.APP_ID || 'YOUR-APP-ID',
@@ -18,7 +22,7 @@ var conf = {
     redirect_uri:   process.env.REDIRECT_URI || 'http://localhost:3000/auth/facebook'
 };
 
-app.get('/auth/facebook', function(req, res) {
+app.get('/auth/facebook', cors(corsOptions), function(req, res, next) {
 
     if (!req.query.code) {
         var authUrl = graph.getOauthUrl({
@@ -44,12 +48,12 @@ app.get('/auth/facebook', function(req, res) {
         "code":           req.query.code
     }, function (err, facebookRes) {
         // We redirect to /user
-        res.redirect('/user');
+        res.redirect('http://127.0.0.1:9000/#/user');
     });
 });
 
 //  Routing
-app.get('/user', function(req, res){
+app.get('/user', cors(corsOptions), function(req, res, next){
 
     var newUserObj = {};
     var friendsIdObj = {};
