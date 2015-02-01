@@ -14,6 +14,14 @@ var corsOptions = {
   origin: process.env.REMOTE_URI || 'http://127.0.0.1:9000'
 };
 
+console.log('cors: ', corsOptions.origin);
+console.log('APP_ID: ', process.env.APP_ID);
+console.log('APP_SECRET: ', process.env.APP_SECRET);
+console.log('APP_USER: ', process.env.APP_USER);
+console.log('APP_PASSWORD: ', process.env.APP_PASSWORD);
+console.log('APP_DB: ', process.env.APP_DB);
+console.log('REDIRECT_URI: ', process.env.REDIRECT_URI);
+
 // fbgraph
 var conf = {
     client_id:      process.env.APP_ID || 'YOUR-APP-ID',
@@ -23,6 +31,14 @@ var conf = {
 };
 
 app.get('/auth/facebook', cors(corsOptions), function(req, res, next) {
+
+    console.log('cors: ', corsOptions.origin);
+console.log('APP_ID: ', process.env.APP_ID);
+console.log('APP_SECRET: ', process.env.APP_SECRET);
+console.log('APP_USER: ', process.env.APP_USER);
+console.log('APP_PASSWORD: ', process.env.APP_PASSWORD);
+console.log('APP_DB: ', process.env.APP_DB);
+console.log('REDIRECT_URI: ', process.env.REDIRECT_URI);
 
     if (!req.query.code) {
         var authUrl = graph.getOauthUrl({
