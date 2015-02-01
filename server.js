@@ -2,7 +2,7 @@ var express = require('express');
 var cors = require('cors');
 var Promise = require('bluebird');
 var pmongo = require('promised-mongo');
-var db = Promise.promisifyAll(pmongo('mongodb://127.0.0.1:27017/myDb', ['myCollection']));
+var db = Promise.promisifyAll(pmongo('mongodb://' + process.env.APP_USER + ':' + process.env.APP_PASSWORD + '@' + process.env.APP_DB, ['users']));
 var graph = Promise.promisifyAll(require('fbgraph'));
 var __ = require('underscore');
 
@@ -11,7 +11,7 @@ var app = express();
 app.use(cors());
 
 var corsOptions = {
-  origin: 'http://127.0.0.1:9000'
+  origin: process.env.REMOTE_URI || 'http://127.0.0.1:9000'
 };
 
 // fbgraph
@@ -48,7 +48,7 @@ app.get('/auth/facebook', cors(corsOptions), function(req, res, next) {
         "code":           req.query.code
     }, function (err, facebookRes) {
         // We redirect to /user
-        res.redirect('http://127.0.0.1:9000/#/user');
+        res.redirect(corsOptions.origin + '/#/user');
     });
 });
 
@@ -72,18 +72,16 @@ app.get('/user', cors(corsOptions), function(req, res, next){
         friendsIdObj = {date: new Date(), friends: __.pluck(data[1].data, 'id')}
     })
     .then(function(){
-        return db.myCollection.findOne({id: newUserObj.id})
+        return db.users.findOne({id: newUserObj.id})
     })
     .then(function(dbUserObj){
         if(!dbUserObj){
             newUserObj.allFriendsId = [];
             newUserObj.allFriendsId.push(friendsIdObj);
 
-            return db.myCollection.save(newUserObj)
+            return db.users.save(newUserObj)
         }
         else{
-            console.log('----------------------------------------');
-
             // we add the current (the most updated) friends array to the newUserObj
             newUserObj.allFriendsId = dbUserObj.allFriendsId;
             
@@ -91,16 +89,16 @@ app.get('/user', cors(corsOptions), function(req, res, next){
             if(__.difference(dbUserObj.allFriendsId[dbUserObj.allFriendsId.length - 1].friends, friendsIdObj.friends).length === 0){
                                         
                 // we update the user in the database
-                return db.myCollection.update({id: dbUserObj.id}, newUserObj);
+                return db.users.update({id: dbUserObj.id}, newUserObj);
             }
             else{
                 newUserObj.allFriendsId.push(friendsIdObj);
-                return db.myCollection.update({id: dbUserObj.id}, newUserObj);
+                return db.users.update({id: dbUserObj.id}, newUserObj);
             }
         }
     })
     .then(function(){
-        return db.myCollection.find({ id: { $in: friendsIdObj.friends } }).toArray();
+        return db.users.find({ id: { $in: friendsIdObj.friends } }).toArray();
     })
     .then(function(data){
 
