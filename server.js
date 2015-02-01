@@ -32,12 +32,12 @@ var conf = {
                     'user_photos,'+
                     'user_relationships,'+
                     'user_relationship_details,'+
-                    'user_tagged_places'+
+                    'user_tagged_places,'+
                     'user_work_history,'+
-                    'user_relationships'+
-                    'user_religion_politics'+
-                    'user_events'+
-                    'user_activities'+
+                    'user_relationships,'+
+                    'user_religion_politics,'+
+                    'user_events,'+
+                    'user_activities,'+
                     'friends_about_me,'+
                     'friends_birthday,'+
                     'friends_education_history,'+
