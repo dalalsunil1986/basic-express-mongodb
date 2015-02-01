@@ -170,4 +170,4 @@ app.get('/user', function(req, res, next){
 //     })
 // });
 
-app.listen('port');
+app.listen(app.get('port'));
