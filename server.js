@@ -20,27 +20,39 @@ var corsOptions = {
 var conf = {
     client_id:      process.env.APP_ID || 'YOUR-APP-ID',
     client_secret:  process.env.APP_SECRET || 'YOUR-APP-SECRET',
-    scope:          'email, user_about_me, friends_about_me, user_birthday, friends_birthday, user_education_history, friends_education_history, user_hometown, friends_hometown, user_interests, friends_interests, user_likes, friends_likes, user_location, friends_location, user_photos, friends_photos, user_relationships, friends_relationships, user_relationship_details, friends_relationship_details, user_work_history, friends_work_history, read_friendlists,user_relationships',
-    redirect_uri:   process.env.REDIRECT_URI || 'http://localhost:3000/auth/facebook'
+    redirect_uri:   process.env.REDIRECT_URI || 'http://localhost:3000/auth/facebook',
+    scope:          'email,'+
+                    'user_about_me,'+
+                    'user_birthday,'+
+                    'user_education_history,'+
+                    'user_hometown,'+
+                    'user_interests,'+
+                    'user_likes,'+
+                    'user_location,'+
+                    'user_photos,'+
+                    'user_relationships,'+
+                    'user_relationship_details,'+
+                    'user_tagged_places'+
+                    'user_work_history,'+
+                    'user_relationships'+
+                    'user_religion_politics'+
+                    'user_events'+
+                    'user_activities'+
+                    'friends_about_me,'+
+                    'friends_birthday,'+
+                    'friends_education_history,'+
+                    'friends_hometown,'+
+                    'friends_interests,'+
+                    'friends_likes,'+
+                    'friends_location,'+
+                    'friends_photos,'+
+                    'friends_relationships,'+
+                    'friends_relationship_details,'+
+                    'friends_work_history,'+
+                    'read_friendlists,'
 };
 
-console.log('cors: ', corsOptions.origin);
-console.log('APP_ID: ', process.env.APP_ID);
-console.log('APP_SECRET: ', process.env.APP_SECRET);
-console.log('APP_USER: ', process.env.APP_USER);
-console.log('APP_PASSWORD: ', process.env.APP_PASSWORD);
-console.log('APP_DB: ', process.env.APP_DB);
-console.log('REDIRECT_URI: ', process.env.REDIRECT_URI);
-
 app.get('/auth/facebook', cors(corsOptions), function(req, res, next) {
-
-    console.log('cors: ', corsOptions.origin);
-    console.log('APP_ID: ', process.env.APP_ID);
-    console.log('APP_SECRET: ', process.env.APP_SECRET);
-    console.log('APP_USER: ', process.env.APP_USER);
-    console.log('APP_PASSWORD: ', process.env.APP_PASSWORD);
-    console.log('APP_DB: ', process.env.APP_DB);
-    console.log('REDIRECT_URI: ', process.env.REDIRECT_URI);
 
     if (!req.query.code) {
         var authUrl = graph.getOauthUrl({
@@ -69,10 +81,6 @@ app.get('/auth/facebook', cors(corsOptions), function(req, res, next) {
         res.redirect(corsOptions.origin + '/#/user');
     });
 });
-
-// app.get('/user', function(req, res, next){
-//     res.send({greetings: 'Hello'});
-// });
 
 //  Routing
 app.get('/user', cors(corsOptions), function(req, res, next){
