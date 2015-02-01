@@ -1,10 +1,10 @@
 var express = require('express');
 var cors = require('cors');
-// var Promise = require('bluebird');
-// var pmongo = require('promised-mongo');
-// var db = Promise.promisifyAll(pmongo('mongodb://' + process.env.APP_USER + ':' + process.env.APP_PASSWORD + '@' + process.env.APP_DB, ['users']));
-// var graph = Promise.promisifyAll(require('fbgraph'));
-// var __ = require('underscore');
+var Promise = require('bluebird');
+var pmongo = require('promised-mongo');
+var db = Promise.promisifyAll(pmongo('mongodb://' + process.env.APP_USER + ':' + process.env.APP_PASSWORD + '@' + process.env.APP_DB, ['users']));
+var graph = Promise.promisifyAll(require('fbgraph'));
+var __ = require('underscore');
 
 var app = express();
 
