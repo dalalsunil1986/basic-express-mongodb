@@ -71,7 +71,11 @@ console.log('REDIRECT_URI: ', process.env.REDIRECT_URI);
 //     });
 // });
 
-app.get('/user', cors(corsOptions), function(req, res, next){
+// app.get('/user', cors(corsOptions), function(req, res, next){
+//     res.send({greetings: 'Hello'});
+// });
+
+app.get('/user', function(req, res, next){
     res.send({greetings: 'Hello'});
 });
 
